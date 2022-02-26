@@ -1,4 +1,4 @@
-function Set-ADOReleaseVariables {
+function Set-EnvVariablesFromADORelease {
     <#
     .SYNOPSIS
         Retrieves variables from Azure DevOps and creates as local environment variables.

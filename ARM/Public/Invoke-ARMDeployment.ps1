@@ -93,7 +93,7 @@ function Invoke-ARMDeployment {
             }
         }
     }
-    function Add-TemplateParameterFromKeyVault ($Name, $SecretName, $AsType, $Source) {
+    function Add-TemplateParameterFromKeyVault ($Name, $KVName, $SecretName, $AsType, $Source) {
         <#
     .SYNOPSIS
         Adds a template parameter from a secret in KeyVault.
@@ -160,25 +160,26 @@ function Invoke-ARMDeployment {
         }
         else {
             # Get the environment variable value for the parameter name, if it exists
-            $EnvValue = (Get-Item Env:\$ParameterName -ErrorAction SilentlyContinue).Value
+            $EnvValue = Get-Item Env:\$ParameterName -ErrorAction SilentlyContinue
 
             # If the Environment Value contains the string '$false' convert it to the boolean equivalent
-            if ($EnvValue -eq '$false') { $EnvValue = $false }
+            if ($EnvValue.Value -eq '$false') { $EnvValue = $false }
         
             # Attempt to map a value to the template parameter from each of the known locations, in the specified priority order
-            if (-not [string]::IsNullOrEmpty($EnvValue)) {
+            if ($EnvValue) {
                 # Use the value from the Environment Variable of the same name
-                Add-TemplateParameter -Name $ParameterName -Value $EnvValue -AsType $Type -Source 'EnvironmentVariable'
+                Add-TemplateParameter -Name $ParameterName -Value $EnvValue.Value -AsType $Type -Source 'EnvironmentVariable'
             }
             elseif ($ParameterName -in $SecretParams.Keys) {
                 # Use the value for the Secret specified in the list of Known Secrets from the KeyVault specified via -KvName
                 $KVSecretName = $SecretParams[$ParameterName]
-                Add-TemplateParameterFromKeyVault -Name $ParameterName -SecretName $KVSecretName -AsType $Type -Source 'KeyVaultSecret'
+                Add-TemplateParameterFromKeyVault -Name $ParameterName -KVName $KVName -SecretName $KVSecretName -AsType $Type -Source 'KeyVaultSecret'
             }
             elseif ($TemplatePF.Parameters.$ParameterName.reference.keyVault) {
-                # Retrieve the Key Vault secret named in the Parameter file from the KeyVault specified via -KVName
+                # Retrieve the Key Vault secret named in the Parameter
+                $PFKVName = ($TemplatePF.Parameters.$ParameterName.reference.keyVault.Id -split '/')[-1]
                 $PFKVSecretName = $TemplatePF.Parameters.$ParameterName.reference.secretName
-                Add-TemplateParameterFromKeyVault -Name $ParameterName -SecretName $PFKVSecretName -AsType 'SecureString' -Source 'ParameterFileKeyVaultSecret'
+                Add-TemplateParameterFromKeyVault -Name $ParameterName -KvName $PFKVName -SecretName $PFKVSecretName -AsType 'SecureString' -Source 'ParameterFileKeyVaultSecret'
             }
             elseif ($TemplatePF.Parameters.$ParameterName.value) {
                 # Use the value provided via the Parameter File
