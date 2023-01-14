@@ -1,4 +1,4 @@
-function Get-VMDiskEncryptionStatus {
+function Get-VmDiskEncryptionStatus {
     <#
     .SYNOPSIS
         Retrieve disk encryption status for all VMs.

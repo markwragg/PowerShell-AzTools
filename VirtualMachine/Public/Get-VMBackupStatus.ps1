@@ -1,4 +1,4 @@
-function Get-VMBackupStatus {
+function Get-VmBackupStatus {
     <#
     .SYNOPSIS
         Retrieve VM backup status for all VMs.

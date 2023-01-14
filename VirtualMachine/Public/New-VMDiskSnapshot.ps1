@@ -1,4 +1,4 @@
-function New-VMDiskSnapshot {
+function New-VmDiskSnapshot {
     <#
     .SYNOPSIS
         Creates disk snapshots for each disk of each VM or for a specified VM or VM/s (by partial name match).
