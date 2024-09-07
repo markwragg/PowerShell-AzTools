@@ -94,6 +94,42 @@ function Set-EnvVariablesFromADORelease {
         }
     }
 
+    Write-Output '', "Processing ADO Variable Group scope variables for $Environment.."
+
+    foreach ($VariableGroupNumber in $ADOEnvironment.variableGroups) {
+
+        $VariableGroup = Get-VSTeamVariableGroup -ProjectName $ProjectName -Id $VariableGroupNumber
+
+        foreach ($VariableGroupVariable in $VariableGroup.Variables.psobject.properties.name) {
+
+            if ($VariableGroup.variables.$VariableGroupVariable.value -eq '$false') { $VariableGroup.variables.$VariableGroupVariable.value = $false }
+    
+            do {
+                $Result = $VariableGroup.variables.$VariableGroupVariable.value | Select-String -Pattern '(?<=\$\()(.*?)(?=\))' -AllMatches
+                
+                foreach ($Match in $Result.Matches) { 
+                    $SubParameter = $Match.value
+                    $ReplaceParameter = '$(' + $SubParameter + ')'
+                    $ReplaceValue = if ($ADOEnvironment.variables.$SubParameter.value) {
+                        $ADOEnvironment.variables.$SubParameter.value
+                    }
+                    else {
+                        $VariableGroup.variables.$SubParameter.value
+                    }
+                    Write-Verbose "Replacing $ReplaceParameter with $ReplaceValue.."
+                    $VariableGroup.variables.$VariableGroupVariable.value = $VariableGroup.variables.$VariableGroupVariable.value.replace($ReplaceParameter, $ReplaceValue)
+                }
+            } until (-not $Result)
+            
+            $Value = $VariableGroup.Variables.$VariableGroupVariable.value
+            
+            if (-not [Environment]::GetEnvironmentVariable($VariableGroupVariable) -and $Value) {
+                Write-Verbose "Creating Env:\$VariableGroupVariable with value $Value.."
+                New-Item "Env:\$VariableGroupVariable" -Value $Value | Out-Null
+            }
+        }
+    }
+
     Write-Output '', "Processing ADO Release scope variables.."
 
     foreach ($ADODefVariable in $ADODefinition.Variables.psobject.properties.name) {
